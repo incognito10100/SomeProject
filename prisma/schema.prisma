@@ -1,0 +1,204 @@
+// Tell Prisma to generate its JavaScript client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Tell Prisma which database to connect to
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────
+// Enums are fixed lists of allowed values for a field
+
+enum Role {
+  ADMIN
+  MENTOR
+  MEMBER
+}
+
+enum TaskType {
+  READING
+  REFLECTION
+  LECTURE
+  ESSAY
+  DISCUSSION
+}
+
+enum ChainStatus {
+  ACTIVE
+  BROKEN
+  COMPLETED
+}
+
+enum StreakType {
+  READING
+  REFLECTION
+  TASK
+  COMBINED
+}
+
+// ─── TABLES ───────────────────────────────────────────────────
+
+// Every person who uses the platform
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String
+  password    String // stored as a hash, never plain text
+  role        Role     @default(MEMBER)
+  avatarUrl   String? // the ? means this field is optional
+  timezone    String   @default("Asia/Kolkata")
+  totalPoints Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // These lines connect User to other tables
+  submissions   TaskSubmission[]
+  journals      Journal[]
+  streaks       Streak[]
+  chainLinks    ChainLink[]
+  notifications Notification[]
+  createdTasks  Task[]           @relation("CreatedTasks")
+  seededChains  KnowledgeChain[] @relation("SeededChains")
+  mentorReviews Journal[]        @relation("MentorReviews")
+}
+
+// A task created by admin and assigned to members
+model Task {
+  id           String   @id @default(uuid())
+  createdById  String
+  title        String
+  description  String
+  type         TaskType
+  dueAt        DateTime
+  pointsValue  Int      @default(50)
+  minWordCount Int?
+  assignedTo   String[]
+  createdAt    DateTime @default(now())
+
+  createdBy   User             @relation("CreatedTasks", fields: [createdById], references: [id])
+  submissions TaskSubmission[]
+}
+
+// A member's submission for a task
+model TaskSubmission {
+  id             String    @id @default(uuid())
+  taskId         String
+  userId         String
+  content        String?
+  wordCount      Int?
+  submittedAt    DateTime  @default(now())
+  isLate         Boolean   @default(false)
+  mentorScore    Int?
+  mentorFeedback String?
+  reviewedAt     DateTime?
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+// A collaborative knowledge chain seeded by mentor/admin
+model KnowledgeChain {
+  id           String      @id @default(uuid())
+  title        String
+  seedPrompt   String
+  seededById   String
+  status       ChainStatus @default(ACTIVE)
+  windowHours  Int         @default(8)
+  nextDeadline DateTime
+  linkCount    Int         @default(0)
+  createdAt    DateTime    @default(now())
+
+  seededBy User        @relation("SeededChains", fields: [seededById], references: [id])
+  links    ChainLink[]
+}
+
+// One entry in a knowledge chain written by a member
+model ChainLink {
+  id        String   @id @default(uuid())
+  chainId   String
+  userId    String
+  content   String
+  position  Int
+  reactions Json     @default("{\"ignite\":0,\"insight\":0,\"challenge\":0}")
+  createdAt DateTime @default(now())
+
+  chain KnowledgeChain @relation(fields: [chainId], references: [id])
+  user  User           @relation(fields: [userId], references: [id])
+}
+
+// A private reflection journal entry
+model Journal {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  content     String
+  mood        String?
+  wordCount   Int       @default(0)
+  isForReview Boolean   @default(false)
+  mentorId    String?
+  mentorScore Int?
+  mentorNote  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user   User  @relation(fields: [userId], references: [id])
+  mentor User? @relation("MentorReviews", fields: [mentorId], references: [id])
+}
+
+// Tracks a user's reading/reflection/task streaks
+model Streak {
+  id               String     @id @default(uuid())
+  userId           String
+  type             StreakType
+  currentCount     Int        @default(0)
+  bestCount        Int        @default(0)
+  lastActivityDate DateTime?
+  freezeTokens     Int        @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type]) // one streak record per type per user
+}
+
+// In-app notification for bell icon
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  title      String
+  body       String
+  entityType String?
+  entityId   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// A study circle group
+model StudyCircle {
+  id        String   @id @default(uuid())
+  name      String
+  topic     String
+  emblem    String?
+  memberIds String[]
+  mentorId  String?
+  createdAt DateTime @default(now())
+}
+
+// A book, article, or lecture in the library
+model LibraryItem {
+  id          String   @id @default(uuid())
+  title       String
+  author      String?
+  category    String
+  type        String
+  fileUrl     String?
+  externalUrl String?
+  addedById   String
+  createdAt   DateTime @default(now())
+}
