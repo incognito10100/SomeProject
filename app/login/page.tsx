@@ -1,6 +1,4 @@
 'use client'
-// 'use client' means this component runs in the browser
-// It needs to because it handles button clicks and form input
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
@@ -9,141 +7,163 @@ import { useRouter } from 'next/navigation'
 export default function LoginPage() {
   const router = useRouter()
 
-  // State variables — these track what's in the form fields
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
 
-  // This runs when the user clicks the Login button
   async function handleLogin() {
+    if (!email || !password) {
+      setError('Please enter your email and password.')
+      return
+    }
+
     setLoading(true)
     setError('')
 
-    // signIn comes from NextAuth — it calls your authorize function
     const result = await signIn('credentials', {
-      email,
+      email:    email.toLowerCase().trim(),
       password,
-      redirect: false, // we handle redirect ourselves below
+      redirect: false,
     })
 
     setLoading(false)
 
     if (result?.error) {
-      // Login failed — show error message
-      setError('Incorrect email or password. Please try again.')
-    } else {
-      // Login succeeded — go to dashboard
-      router.push('/dashboard')
+      setError('Incorrect email or password.')
+      return
     }
+
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#faf7f2',
+      background: '#f5f0e8',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'Georgia, serif'
+      padding: '20px',
     }}>
       <div style={{
-        width: '400px',
+        width: '100%',
+        maxWidth: '400px',
+        background: 'white',
         border: '1px solid rgba(139,115,85,0.2)',
         borderRadius: '8px',
-        padding: '48px 40px',
-        background: 'white'
+        padding: '40px',
       }}>
-
-        {/* Title */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ fontSize: '28px', fontWeight: '300', color: '#1a1714' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '32px',
+            fontWeight: '300',
+            color: '#1a1714',
+            marginBottom: '6px',
+          }}>
             Intellectus
           </div>
-          <div style={{ fontSize: '12px', color: '#9e9488', marginTop: '6px' }}>
-            Sign in to your account
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '9px',
+            letterSpacing: '0.25em',
+            textTransform: 'uppercase' as const,
+            color: '#c9973a',
+          }}>
+            Scholar's Platform
           </div>
         </div>
 
-        {/* Error message */}
-        {error && (
-          <div style={{
-            background: 'rgba(139,32,32,0.06)',
-            border: '1px solid rgba(139,32,32,0.2)',
-            borderRadius: '4px',
-            padding: '10px 14px',
-            color: '#8b2020',
-            fontSize: '13px',
-            marginBottom: '20px'
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Email field */}
+        {/* Email */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
-            fontSize: '11px',
             fontFamily: 'monospace',
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
+            fontSize: '9px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase' as const,
             color: '#9e9488',
-            marginBottom: '6px'
+            marginBottom: '6px',
           }}>
             Email
           </label>
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="your@email.com"
+            autoComplete="email"
             style={{
               width: '100%',
               padding: '10px 14px',
               border: '1px solid rgba(139,115,85,0.25)',
               borderRadius: '4px',
-              fontSize: '14px',
-              outline: 'none',
               background: '#faf7f2',
-              fontFamily: 'Georgia, serif'
+              fontFamily: 'Georgia, serif',
+              fontSize: '14px',
+              color: '#1a1714',
+              outline: 'none',
+              boxSizing: 'border-box' as const,
             }}
-            placeholder="you@email.com"
           />
         </div>
 
-        {/* Password field */}
-        <div style={{ marginBottom: '28px' }}>
+        {/* Password */}
+        <div style={{ marginBottom: '24px' }}>
           <label style={{
             display: 'block',
-            fontSize: '11px',
             fontFamily: 'monospace',
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
+            fontSize: '9px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase' as const,
             color: '#9e9488',
-            marginBottom: '6px'
+            marginBottom: '6px',
           }}>
             Password
           </label>
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="Your password"
+            autoComplete="current-password"
             style={{
               width: '100%',
               padding: '10px 14px',
               border: '1px solid rgba(139,115,85,0.25)',
               borderRadius: '4px',
-              fontSize: '14px',
-              outline: 'none',
               background: '#faf7f2',
-              fontFamily: 'Georgia, serif'
+              fontFamily: 'Georgia, serif',
+              fontSize: '14px',
+              color: '#1a1714',
+              outline: 'none',
+              boxSizing: 'border-box' as const,
             }}
-            placeholder="••••••••"
           />
         </div>
 
-        {/* Login button */}
+        {/* Error */}
+        {error && (
+          <div style={{
+            padding: '10px 14px',
+            marginBottom: '16px',
+            background: 'rgba(139,32,32,0.08)',
+            border: '1px solid rgba(139,32,32,0.2)',
+            borderRadius: '4px',
+            fontFamily: 'Georgia, serif',
+            fontSize: '13px',
+            color: '#8b2020',
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Button */}
         <button
           onClick={handleLogin}
           disabled={loading}
@@ -154,24 +174,33 @@ export default function LoginPage() {
             color: '#f5f0e8',
             border: 'none',
             borderRadius: '4px',
-            fontSize: '13px',
             fontFamily: 'Georgia, serif',
+            fontSize: '14px',
             cursor: loading ? 'not-allowed' : 'pointer',
+            marginBottom: '16px',
           }}
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Signing in...' : 'Sign In →'}
         </button>
 
-        {/* Link to registration */}
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <span style={{ fontSize: '12px', color: '#9e9488' }}>
-            No account yet?{' '}
+        {/* Register link */}
+        <div style={{ textAlign: 'center' }}>
+          <span style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '13px',
+            color: '#9e9488',
+          }}>
+            No account?{' '}
           </span>
-          <a href="/register" style={{ fontSize: '12px', color: '#8b7355' }}>
-            Request Access
+          <a href="/register" style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '13px',
+            color: '#c9973a',
+            textDecoration: 'none',
+          }}>
+            Register with invite code
           </a>
         </div>
-
       </div>
     </div>
   )
