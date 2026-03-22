@@ -1,11 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/check-chains",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/reset-streaks",
+      "path": "/api/cron/scheduler",
       "schedule": "0 0 * * *"
     }
   ]

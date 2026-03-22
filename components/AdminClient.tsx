@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+const [running, setRunning] = useState(false)
+const [runMsg,  setRunMsg]  = useState('')
 
 type User = {
   id: string
@@ -152,6 +154,65 @@ export default function AdminClient({
       setTaskMsg('Something went wrong. Try again.')
     }
   }
+
+  async function runScheduler() {
+  setRunning(true)
+  setRunMsg('')
+  const res  = await fetch('/api/cron/scheduler')
+  const data = await res.json()
+  setRunning(false)
+  setRunMsg(`✓ Done — ${data.results.chains.broken ?? 0} chains checked, ${data.results.streaks.reset ?? 0} streaks reset`)
+}
+
+// Add this JSX at the top of the overview tab
+<div style={{
+  display: 'flex', alignItems: 'center',
+  gap: '12px', marginBottom: '24px',
+  padding: '16px 20px',
+  background: '#f5f0e8',
+  border: '1px solid rgba(139,115,85,0.2)',
+  borderRadius: '6px',
+}}>
+  <div style={{ flex: 1 }}>
+    <div style={{
+      fontFamily: 'Georgia, serif',
+      fontSize: '14px', color: '#1a1714'
+    }}>
+      Background Jobs
+    </div>
+    <div style={{
+      fontFamily: 'monospace', fontSize: '9px',
+      color: '#9e9488', marginTop: '3px'
+    }}>
+      Runs automatically at midnight · click to run now
+    </div>
+  </div>
+  {runMsg && (
+    <div style={{
+      fontFamily: 'Georgia, serif', fontSize: '12px',
+      color: '#3d6b3d', fontStyle: 'italic'
+    }}>
+      {runMsg}
+    </div>
+  )}
+  <button
+    onClick={runScheduler}
+    disabled={running}
+    style={{
+      padding: '8px 16px',
+      background: running ? '#9e9488' : '#1a1714',
+      color: '#f5f0e8', border: 'none',
+      borderRadius: '4px',
+      fontFamily: 'monospace', fontSize: '9px',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase' as const,
+      cursor: running ? 'not-allowed' : 'pointer',
+      flexShrink: 0,
+    }}
+  >
+    {running ? 'Running...' : '▶ Run Now'}
+  </button>
+</div>
 
   // ── Seed chain ─────────────────────────────────────────────
   async function seedChain() {
