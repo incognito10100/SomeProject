@@ -3,67 +3,67 @@ import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
+  try {
+    const { name, email, password, inviteCode } = await req.json()
 
-  // Get the data sent from the registration form
-  const { email, name, password, inviteCode } = await req.json()
-
-  // Basic validation — check required fields exist
-  if (!email || !name || !password) {
-    return NextResponse.json(
-      { error: 'Email, name and password are required' },
-      { status: 400 }
-    )
-  }
-
-  // Check the invite code matches your secret
-  // This stops random people from registering
-  if (inviteCode !== process.env.INVITE_CODE) {
-    return NextResponse.json(
-      { error: 'Invalid invite code' },
-      { status: 403 }
-    )
-  }
-
-  // Check if this email is already registered
-  const existingUser = await prisma.user.findUnique({
-    where: { email }
-  })
-
-  if (existingUser) {
-    return NextResponse.json(
-      { error: 'An account with this email already exists' },
-      { status: 409 }
-    )
-  }
-
-  // Hash the password — never store plain text
-  // The 12 is the "salt rounds" — higher = more secure but slower
-  const hashedPassword = await bcrypt.hash(password, 12)
-
-  // Create the user in the database
-  const user = await prisma.user.create({
-    data: {
-      email,
-      name,
-      password: hashedPassword,
-      role: 'MEMBER', // everyone starts as a member
+    // Validate all fields present
+    if (!name || !email || !password || !inviteCode) {
+      return NextResponse.json(
+        { error: 'All fields are required' },
+        { status: 400 }
+      )
     }
-  })
 
-  // Create initial streak records for this user
-  // Every member starts with all 4 streak types at zero
-  await prisma.streak.createMany({
-    data: [
-      { userId: user.id, type: 'READING'    },
-      { userId: user.id, type: 'REFLECTION' },
-      { userId: user.id, type: 'TASK'       },
-      { userId: user.id, type: 'COMBINED'   },
-    ]
-  })
+    // Check invite code
+    if (inviteCode !== process.env.INVITE_CODE) {
+      return NextResponse.json(
+        { error: 'Invalid invite code' },
+        { status: 400 }
+      )
+    }
 
-  // Return success — don't return the password hash
-  return NextResponse.json({
-    success: true,
-    user: { id: user.id, email: user.email, name: user.name }
-  })
+    // Check email not already taken
+    const existing = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    })
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'An account with this email already exists' },
+        { status: 400 }
+      )
+    }
+
+    // Hash password
+    const hashed = await bcrypt.hash(password, 12)
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        name:     name.trim(),
+        email:    email.toLowerCase().trim(),
+        password: hashed,
+        role:     'MEMBER',
+      }
+    })
+
+    // Create 4 streak records
+    await prisma.streak.createMany({
+      data: [
+        { userId: user.id, type: 'READING'    },
+        { userId: user.id, type: 'REFLECTION' },
+        { userId: user.id, type: 'TASK'       },
+        { userId: user.id, type: 'COMBINED'   },
+      ]
+    })
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('Register error:', error)
+    return NextResponse.json(
+      { error: 'Something went wrong. Please try again.' },
+      { status: 500 }
+    )
+  }
 }
