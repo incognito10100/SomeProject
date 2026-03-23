@@ -265,7 +265,7 @@ export default function AdminClient({
           {/* Stat cards */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
             gap: '16px',
             marginBottom: '24px'
           }}>
@@ -346,8 +346,8 @@ export default function AdminClient({
           }}>
             All Users — {users.length} total
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
                 <tr>
                   {['Name', 'Email', 'Role', 'Points', 'Submissions', 'Journals', 'Change Role'].map(h => (
@@ -478,7 +478,7 @@ export default function AdminClient({
             />
 
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px'
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             }}>
               <div>
                 <label style={label}>Type</label>

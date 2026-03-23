@@ -1,209 +1,312 @@
 'use client'
 
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 const navItems = [
-  { href: '/dashboard',    label: 'Dashboard',         icon: '◈', role: null     },
-  { href: '/tasks',        label: 'Tasks',              icon: '☰', role: null     },
-  { href: '/chain',        label: 'Knowledge Chain',    icon: '⬡', role: null     },
-  { href: '/journal',      label: 'Reflection Journal', icon: '✦', role: null     },
-  { href: '/circles',      label: 'Study Circles',      icon: '◎', role: null     },
-  { href: '/library',      label: 'Knowledge Library',  icon: '▣', role: null     },
-  { href: '/review-queue', label: 'Review Queue',       icon: '✎', role: 'MENTOR' },
-  { href: '/admin',        label: 'Admin Panel',        icon: '⊞', role: 'ADMIN'  },
+  { href: '/dashboard', label: 'Dashboard', icon: '◈', roles: ['ADMIN','MENTOR','MEMBER'] },
+  { href: '/tasks', label: 'Tasks', icon: '☰', roles: ['ADMIN','MENTOR','MEMBER'] },
+  { href: '/chain', label: 'Knowledge Chain', icon: '⛓', roles: ['ADMIN','MENTOR','MEMBER'] },
+  { href: '/journal', label: 'Reflection Journal', icon: '✦', roles: ['ADMIN','MENTOR','MEMBER'] },
+  { href: '/circles', label: 'Study Circles', icon: '◎', roles: ['ADMIN','MENTOR','MEMBER'] },
+  { href: '/library', label: 'Knowledge Library', icon: '▣', roles: ['ADMIN','MENTOR','MEMBER'] },
+  { href: '/review-queue', label: 'Review Queue', icon: '✎', roles: ['ADMIN','MENTOR'] },
+  { href: '/admin', label: 'Admin Panel', icon: '⊞', roles: ['ADMIN'] },
 ]
 
-type Props = {
-  userName:       string
-  userRole:       string
-  combinedStreak: number
-}
-
-export default function Sidebar({ userName, userRole, combinedStreak }: Props) {
+export default function Sidebar({
+  user,
+  streakCount,
+}: {
+  user: { name: string; role: string }
+  streakCount: number
+}) {
   const pathname = usePathname()
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
 
-  const visibleItems = navItems.filter(item => {
-    if (!item.role) return true
-    if (item.role === 'ADMIN'  && userRole === 'ADMIN') return true
-    if (item.role === 'MENTOR' && ['ADMIN', 'MENTOR'].includes(userRole)) return true
-    return false
-  })
+  const filtered = navItems.filter(item =>
+    item.roles.includes(user.role)
+  )
 
-  return (
-    <nav style={{
-      width:      '260px',
-      minHeight:  '100vh',
-      background: '#1a1714',
-      color:      '#f5f0e8',
-      display:    'flex',
-      flexDirection: 'column',
-      position:   'fixed',
-      left: 0,
-      top:  0,
-      zIndex: 100,
-      borderRight: '1px solid rgba(255,255,255,0.06)'
-    }}>
-
-      {/* ── Logo ─────────────────────────────────── */}
-      <div style={{
-        padding:      '32px 28px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.08)'
-      }}>
+  // ───── MOBILE NAV ─────
+  if (isMobile) {
+    return (
+      <>
         <div style={{
-          fontFamily:    'Georgia, serif',
-          fontSize:      '24px',
-          fontWeight:    '300',
-          color:         '#f5f0e8',
-          letterSpacing: '0.04em'
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '52px',
+          background: '#1a1714',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          zIndex: 100,
+          borderBottom: '1px solid rgba(201,151,58,0.2)',
+        }}>
+          <div style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '18px',
+            color: '#f5f0e8',
+            fontWeight: '300',
+          }}>
+            Intellectus
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {streakCount > 0 && (
+              <div style={{
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: '#c9973a',
+              }}>
+                🔥 {streakCount}
+              </div>
+            )}
+
+            <button
+              onClick={() => setOpen(!open)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#f5f0e8',
+                fontSize: '22px',
+                cursor: 'pointer',
+              }}
+            >
+              {open ? '✕' : '☰'}
+            </button>
+          </div>
+        </div>
+
+        {open && (
+          <div style={{
+            position: 'fixed',
+            top: '52px',
+            left: 0,
+            right: 0,
+            background: '#1a1714',
+            zIndex: 99,
+            borderBottom: '1px solid rgba(201,151,58,0.2)',
+            padding: '8px 0',
+          }}>
+            {filtered.map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 20px',
+                  textDecoration: 'none',
+                  background: pathname === item.href
+                    ? 'rgba(201,151,58,0.1)'
+                    : 'transparent',
+                  borderLeft: pathname === item.href
+                    ? '2px solid #c9973a'
+                    : '2px solid transparent',
+                }}
+              >
+                <span style={{ color: '#c9973a', fontSize: '16px' }}>
+                  {item.icon}
+                </span>
+
+                <span style={{
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '15px',
+                  color: pathname === item.href
+                    ? '#f5f0e8'
+                    : 'rgba(245,240,232,0.7)',
+                }}>
+                  {item.label}
+                </span>
+              </Link>
+            ))}
+
+            <div style={{
+              borderTop: '1px solid rgba(139,115,85,0.2)',
+              margin: '8px 0',
+            }}/>
+
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                background: 'none',
+                border: 'none',
+                color: 'rgba(245,240,232,0.5)',
+                fontFamily: 'Georgia, serif',
+                fontSize: '15px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              ↩ Sign Out
+            </button>
+          </div>
+        )}
+
+        <div style={{ height: '52px' }} />
+      </>
+    )
+  }
+
+  // ───── DESKTOP SIDEBAR ─────
+  return (
+    <div style={{
+      width: '240px',
+      background: '#1a1714',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      borderRight: '1px solid rgba(201,151,58,0.15)',
+    }}>
+      <div style={{ padding: '28px 24px 20px' }}>
+        <div style={{
+          fontFamily: 'Georgia, serif',
+          fontSize: '20px',
+          color: '#f5f0e8',
+          fontWeight: '300',
         }}>
           Intellectus
         </div>
+
         <div style={{
-          fontFamily:    'monospace',
-          fontSize:      '9px',
+          fontFamily: 'monospace',
+          fontSize: '8px',
           letterSpacing: '0.2em',
           textTransform: 'uppercase',
-          color:         '#c4a882',
-          marginTop:     '4px'
+          color: '#c9973a',
         }}>
           Scholar's Platform
         </div>
       </div>
 
-      {/* ── User info ────────────────────────────── */}
       <div style={{
-        padding:      '18px 28px',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        display:      'flex',
-        alignItems:   'center',
-        gap:          '12px'
+        padding: '12px 20px',
+        margin: '0 12px 16px',
+        background: 'rgba(255,255,255,0.04)',
+        borderRadius: '6px',
+        border: '1px solid rgba(201,151,58,0.1)',
       }}>
         <div style={{
-          width:          '36px',
-          height:         '36px',
-          borderRadius:   '50%',
-          background:     'linear-gradient(135deg, #8b7355, #a07830)',
-          display:        'flex',
-          alignItems:     'center',
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          background: '#c9973a',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          fontFamily:     'Georgia, serif',
-          fontSize:       '14px',
-          color:          '#f5f0e8',
-          flexShrink:     0
+          fontSize: '14px',
+          color: '#1a1714',
+          fontWeight: 'bold',
+          marginBottom: '8px',
         }}>
-          {userName ? userName.charAt(0).toUpperCase() : '?'}
+          {user.name.charAt(0).toUpperCase()}
         </div>
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{
-            fontFamily:    'Georgia, serif',
-            fontSize:      '14px',
-            color:         '#f5f0e8',
-            whiteSpace:    'nowrap',
-            overflow:      'hidden',
-            textOverflow:  'ellipsis'
-          }}>
-            {userName}
-          </div>
-          <div style={{
-            fontFamily:    'monospace',
-            fontSize:      '9px',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color:         '#c9973a',
-            marginTop:     '2px'
-          }}>
-            {userRole}
-          </div>
-        </div>
-      </div>
 
-      {/* ── Navigation ───────────────────────────── */}
-      <div style={{ flex: 1, padding: '12px 0' }}>
-        {visibleItems.map(item => {
-          const isActive = pathname === item.href ||
-                           pathname.startsWith(item.href + '/')
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display:        'flex',
-                alignItems:     'center',
-                gap:            '12px',
-                padding:        '10px 28px',
-                color:          isActive ? '#f5f0e8' : 'rgba(196,168,130,0.65)',
-                textDecoration: 'none',
-                borderLeft:     isActive ? '2px solid #c9973a' : '2px solid transparent',
-                background:     isActive ? 'rgba(201,151,58,0.1)' : 'transparent',
-                fontFamily:     'Georgia, serif',
-                fontSize:       '13px',
-              }}
-            >
-              <span style={{ fontSize: '14px', opacity: isActive ? 1 : 0.7 }}>
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          )
-        })}
-      </div>
-
-      {/* ── Streak ───────────────────────────────── */}
-      <div style={{
-        padding:    '20px 28px',
-        borderTop:  '1px solid rgba(255,255,255,0.08)',
-        background: 'rgba(201,151,58,0.05)'
-      }}>
         <div style={{
-          fontFamily:    'monospace',
-          fontSize:      '8px',
-          letterSpacing: '0.2em',
-          textTransform: 'uppercase',
-          color:         '#c9973a',
-          marginBottom:  '8px'
+          fontFamily: 'Georgia, serif',
+          fontSize: '13px',
+          color: '#f5f0e8',
         }}>
-          Current Streak
+          {user.name}
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-          <span style={{
-            fontFamily: 'Georgia, serif',
-            fontSize:   '32px',
-            fontWeight: '300',
-            color:      '#f5f0e8',
-            lineHeight: 1
-          }}>
-            {combinedStreak}
-          </span>
-          <span style={{
-            fontFamily: 'Georgia, serif',
-            fontSize:   '12px',
-            color:      '#c4a882'
-          }}>
-            days
-          </span>
+
+        <div style={{
+          fontFamily: 'monospace',
+          fontSize: '8px',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: '#c9973a',
+          marginTop: '2px',
+        }}>
+          {user.role}
         </div>
       </div>
 
-      {/* ── Sign out ─────────────────────────────── */}
-      <button
-        onClick={() => signOut({ callbackUrl: '/login' })}
-        style={{
-          padding:    '14px 28px',
-          background: 'transparent',
-          border:     'none',
-          borderTop:  '1px solid rgba(255,255,255,0.06)',
-          color:      'rgba(196,168,130,0.45)',
-          fontFamily: 'Georgia, serif',
-          fontSize:   '12px',
-          cursor:     'pointer',
-          textAlign:  'left',
-        }}
-      >
-        ← Sign Out
-      </button>
+      <nav style={{ flex: 1, padding: '0 8px' }}>
+        {filtered.map(item => (
+          <Link
+            key={item.href}
+            href={item.href}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: '4px',
+              marginBottom: '2px',
+              textDecoration: 'none',
+              background: pathname === item.href
+                ? 'rgba(201,151,58,0.12)'
+                : 'transparent',
+              borderLeft: pathname === item.href
+                ? '2px solid #c9973a'
+                : '2px solid transparent',
+            }}
+          >
+            <span style={{
+              color: pathname === item.href
+                ? '#c9973a'
+                : 'rgba(201,151,58,0.5)',
+              fontSize: '14px',
+              width: '16px',
+            }}>
+              {item.icon}
+            </span>
 
-    </nav>
+            <span style={{
+              fontFamily: 'Georgia, serif',
+              fontSize: '13px',
+              color: pathname === item.href
+                ? '#f5f0e8'
+                : 'rgba(245,240,232,0.6)',
+            }}>
+              {item.label}
+            </span>
+          </Link>
+        ))}
+      </nav>
+
+      <div style={{
+        padding: '16px 20px',
+        borderTop: '1px solid rgba(139,115,85,0.15)',
+      }}>
+        {streakCount > 0 && (
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '10px',
+            color: '#c9973a',
+            marginBottom: '12px',
+          }}>
+            🔥 {streakCount} day streak
+          </div>
+        )}
+
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'rgba(245,240,232,0.4)',
+            fontFamily: 'Georgia, serif',
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
+          ↩ Sign Out
+        </button>
+      </div>
+    </div>
   )
 }

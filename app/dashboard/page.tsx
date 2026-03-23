@@ -93,7 +93,8 @@ export default async function DashboardPage() {
       {/* Streak stat cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        // Streak cards — 2 columns on mobile, 4 on desktop
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
         gap: '16px',
         marginBottom: '32px'
       }}>
@@ -148,7 +149,7 @@ export default async function DashboardPage() {
       {/* Middle row — Tasks + Chain */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1.6fr 1fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '20px',
         marginBottom: '24px'
       }}>

@@ -7,7 +7,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Intellectus',
-  description: 'Scholar\'s Platform',
+  description: "Scholar's Platform",
 }
 
 export default async function RootLayout({
@@ -19,58 +19,69 @@ export default async function RootLayout({
 
   // Get combined streak for sidebar display
   let combinedStreak = 0
+
   if (session) {
     try {
       const { default: prisma } = await import('@/lib/prisma')
+
       const streak = await prisma.streak.findFirst({
         where: {
           userId: (session.user as any).id,
-          type: 'COMBINED'
-        }
+          type: 'COMBINED',
+        },
       })
+
       combinedStreak = streak?.currentCount ?? 0
-    } catch (e) {
+    } catch {
       combinedStreak = 0
     }
   }
 
   return (
     <html lang="en">
-      <body style={{
-        margin: 0,
-        padding: 0,
-        fontFamily: 'Georgia, serif',
-        background: '#faf7f2',
-        minHeight: '100vh',
-      }}>
+      <body
+        style={{
+          margin: 0,
+          padding: 0,
+          fontFamily: 'Georgia, serif',
+          background: '#faf7f2',
+          minHeight: '100vh',
+        }}
+      >
         <SessionProvider session={session}>
           {session ? (
-            // Logged in — show sidebar layout
-            <div style={{
-              display: 'flex',
-              minHeight: '100vh',
-            }}>
-              <Sidebar
-                userRole={(session.user as any).role}
-                userName={session.user?.name ?? ''}
-                combinedStreak ={combinedStreak}
-              />
-              <main style={{
-                flex: 1,
-                marginLeft: '280px',
+            <div
+              style={{
+                display: 'flex',
                 minHeight: '100vh',
-                background: '#faf7f2',
-                overflowX: 'hidden',
-              }}>
+              }}
+            >
+              <Sidebar
+                user={{
+                  name: session.user?.name ?? '',
+                  role: (session.user as any).role,
+                }}
+                streakCount={combinedStreak}
+              />
+
+              <main
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  padding: 'clamp(16px, 4vw, 40px)',
+                  maxWidth: '100%',
+                }}
+              >
                 {children}
               </main>
             </div>
           ) : (
-            // Not logged in — no sidebar
-            <main style={{
-              minHeight: '100vh',
-              background: '#faf7f2',
-            }}>
+            <main
+              style={{
+                minHeight: '100vh',
+                background: '#faf7f2',
+              }}
+            >
               {children}
             </main>
           )}
