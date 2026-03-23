@@ -73,7 +73,7 @@ export default function LoginPage() {
             textTransform: 'uppercase' as const,
             color: '#c9973a',
           }}>
-            Scholar's Platform
+              Members Development Platform
           </div>
         </div>
 
