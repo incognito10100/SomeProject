@@ -187,7 +187,7 @@ export default function Sidebar({
           textTransform: 'uppercase',
           color: '#c9973a',
         }}>
-          Scholar's Platform
+            Members Development Platform
         </div>
       </div>
 
