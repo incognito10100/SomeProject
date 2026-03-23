@@ -7,7 +7,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Intellectus',
-  description: "Scholar's Platform",
+  description: "Member's Intellectual Development Platform",
 }
 
 export default async function RootLayout({
