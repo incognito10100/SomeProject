@@ -94,7 +94,7 @@ export default function TaskList({ tasks, userId, userRole }: Props) {
       </div>
 
       {/* Task cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',width: '100%', }}>
         {filtered.map(task => {
           const isSubmitted = task.submissions.length > 0
           const isOverdue   = !isSubmitted && new Date() > task.dueAt
