@@ -28,8 +28,8 @@ export default function ActivityGraph({ userId }: { userId: string }) {
   for (let i = 363; i >= 0; i--) {
     const d = new Date(today)
     d.setDate(today.getDate() - i)
-    const key = d.toISOString().split('T')[0]
 
+    const key = d.toISOString().split('T')[0]
     const found = data.find(x => x.date === key)
 
     days.push({
@@ -45,78 +45,77 @@ export default function ActivityGraph({ userId }: { userId: string }) {
   }
 
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const weekdays = ['Mon','','Wed','','Fri','','']
 
   function color(count: number) {
-    if (count === 0) return '#ede8dc'
-    if (count === 1) return '#c9d98a'
-    if (count === 2) return '#8fb84a'
-    if (count <= 4) return '#5a9e2f'
-    return '#3d6b1e'
+    if (count === 0) return '#ece6dc'
+    if (count === 1) return '#d8e7b5'
+    if (count === 2) return '#b6d47a'
+    if (count <= 4) return '#8fb84a'
+    return '#5a9e2f'
   }
 
-  const totalActions = days.reduce((s, d) => s + d.count, 0)
-  const activeDays = days.filter(d => d.count > 0).length
+  const total = days.reduce((s,d)=>s+d.count,0)
+  const active = days.filter(d=>d.count>0).length
 
   if (loading) {
-    return (
-      <div style={{ padding: 20, fontStyle: 'italic', color: '#9e9488' }}>
-        Loading activity...
-      </div>
-    )
+    return <div style={{padding:20}}>Loading activity...</div>
   }
 
   return (
+
     <div style={{
-      background: '#f5f0e8',
-      border: '1px solid rgba(139,115,85,0.2)',
-      borderRadius: 6,
-      padding: '20px 24px',
-      marginBottom: 24
+      background:'#f5f0e8',
+      border:'1px solid rgba(139,115,85,0.2)',
+      borderRadius:6,
+      padding:'22px 24px',
+      marginBottom:30
     }}>
 
       {/* Header */}
 
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 12
+        display:'flex',
+        justifyContent:'space-between',
+        marginBottom:14
       }}>
-        <div style={{ fontSize: 15 }}>Activity</div>
+        <div style={{
+          fontFamily:'Georgia, serif',
+          fontSize:17
+        }}>
+          Activity
+        </div>
 
         <div style={{
-          fontFamily: 'monospace',
-          fontSize: 10,
-          color: '#9e9488'
+          fontFamily:'monospace',
+          fontSize:10,
+          color:'#9e9488'
         }}>
-          {totalActions} actions · {activeDays} active days
+          {total} actions · {active} active days
         </div>
       </div>
 
-      {/* Scroll area */}
+      <div style={{overflowX:'auto'}}>
 
-      <div style={{
-        overflowX: 'auto'
-      }}>
+        <div style={{minWidth:760}}>
 
-        <div style={{ minWidth: 720 }}>
-
-          {/* Month row */}
+          {/* Month labels */}
 
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${weeks.length}, 13px)`,
-            marginBottom: 6
+            display:'grid',
+            gridTemplateColumns:`40px repeat(${weeks.length}, 14px)`,
+            marginBottom:6
           }}>
-            {weeks.map((week, i) => {
+            <div></div>
 
+            {weeks.map((week,i)=>{
               const d = new Date(week[0].date)
               const label = d.getDate() <= 7 ? months[d.getMonth()] : ''
-
               return (
                 <div key={i} style={{
-                  fontSize: 9,
-                  fontFamily: 'monospace',
-                  color: '#9e9488'
+                  fontSize:9,
+                  fontFamily:'monospace',
+                  color:'#9e9488'
                 }}>
                   {label}
                 </div>
@@ -127,28 +126,48 @@ export default function ActivityGraph({ userId }: { userId: string }) {
           {/* Grid */}
 
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${weeks.length}, 13px)`,
-            gap: 2
+            display:'grid',
+            gridTemplateColumns:`40px repeat(${weeks.length}, 14px)`
           }}>
 
-            {weeks.map((week, wi) => (
+            {/* Weekday labels */}
+
+            <div style={{
+              display:'grid',
+              gridTemplateRows:'repeat(7,12px)',
+              gap:3,
+              fontSize:9,
+              fontFamily:'monospace',
+              color:'#9e9488',
+              marginRight:6
+            }}>
+              {weekdays.map((d,i)=>(
+                <div key={i}>{d}</div>
+              ))}
+            </div>
+
+            {/* Squares */}
+
+            {weeks.map((week,wi)=>(
               <div key={wi} style={{
-                display: 'grid',
-                gridTemplateRows: 'repeat(7, 11px)',
-                gap: 2
+                display:'grid',
+                gridTemplateRows:'repeat(7,12px)',
+                gap:3
               }}>
 
-                {week.map((day, di) => (
+                {week.map((day,di)=>(
                   <div
                     key={di}
-                    title={`${day.count} actions on ${day.date}`}
+                    title={`${day.count} actions on ${new Date(day.date).toLocaleDateString()}`}
                     style={{
-                      width: 11,
-                      height: 11,
-                      borderRadius: 2,
-                      background: color(day.count)
+                      width:12,
+                      height:12,
+                      borderRadius:2,
+                      background:color(day.count),
+                      transition:'transform 0.1s ease'
                     }}
+                    onMouseEnter={(e)=>e.currentTarget.style.transform='scale(1.15)'}
+                    onMouseLeave={(e)=>e.currentTarget.style.transform='scale(1)'}
                   />
                 ))}
 
