@@ -146,6 +146,7 @@ export default function ActivityGraph({ userId }: { userId: string }) {
         <div style={{
           display: 'flex', gap: '2px',
           overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}>
           {weeks.map((week, wi) => (
             <div key={wi} style={{
