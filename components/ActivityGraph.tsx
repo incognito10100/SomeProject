@@ -102,18 +102,18 @@ export default function ActivityGraph({ userId }: { userId: string }) {
           {totalActions} actions · {totalActive} active days in the last year
         </div>
       </div>
+      
+      {/* Scroll wrapper */}
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch'}}>
 
       {/* Month labels */}
       <div style={{
-        display: 'flex', gap: '0px',
-        marginBottom: '4px', paddingLeft: '20px',
-        position: 'relative' as const,
-        height: '14px',
+        display: 'flex',gap: '2px',marginBottom: '4px', paddingLeft: '24px',position: 'relative',height: '14px',minWidth: '700px'
       }}>
         {monthLabels.map((m, i) => (
           <div key={i} style={{
             position: 'absolute' as const,
-            left: `${m.col * 13}px`,
+            left: `${m.col * 13 + 24}px`,
             fontFamily: 'monospace', fontSize: '9px',
             color: '#9e9488', letterSpacing: '0.05em',
           }}>
