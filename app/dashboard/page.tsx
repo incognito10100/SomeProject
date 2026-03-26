@@ -6,23 +6,17 @@ import ActivityGraph from '@/components/ActivityGraph'
 
 export default async function DashboardPage() {
 
-  // Get who is logged in
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
 
   const userId = (session.user as any).id
-  const role   = (session.user as any).role
 
-  // Fetch everything this user needs for their dashboard
-  // Promise.all runs all queries at the same time — faster
   const [streaks, pendingTasks, activeChain, leaderboard] = await Promise.all([
 
-    // All 4 streak types for this user
     prisma.streak.findMany({
       where: { userId }
     }),
 
-    // Their tasks that haven't been submitted yet
     prisma.task.findMany({
       where: {
         assignedTo: { has: userId },
@@ -32,7 +26,6 @@ export default async function DashboardPage() {
       take: 5
     }),
 
-    // The currently active knowledge chain
     prisma.knowledgeChain.findFirst({
       where: { status: 'ACTIVE' },
       include: {
@@ -44,7 +37,6 @@ export default async function DashboardPage() {
       }
     }),
 
-    // Top 5 members by total points
     prisma.user.findMany({
       orderBy: { totalPoints: 'desc' },
       take: 5,
@@ -53,399 +45,506 @@ export default async function DashboardPage() {
 
   ])
 
-  // Find the combined streak count specifically
   const combinedStreak = streaks.find(s => s.type === 'COMBINED')
-  const readingStreak  = streaks.find(s => s.type === 'READING')
-  const reflStreak     = streaks.find(s => s.type === 'REFLECTION')
-  const taskStreak     = streaks.find(s => s.type === 'TASK')
+  const readingStreak = streaks.find(s => s.type === 'READING')
+  const reflStreak = streaks.find(s => s.type === 'REFLECTION')
+  const taskStreak = streaks.find(s => s.type === 'TASK')
 
-  // Find this user's rank in the leaderboard
   const myRank = leaderboard.findIndex(u => u.id === userId) + 1
 
-  return (
-    <div style={{
-      padding: '40px',
-      fontFamily: 'Georgia, serif',
-      maxWidth: '1100px'
-    }}>
+  const greeting =
+    new Date().getHours() < 12
+      ? 'Good morning'
+      : new Date().getHours() < 18
+      ? 'Good afternoon'
+      : 'Good evening'
 
-      {/* Page title */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{
-          fontFamily: 'Georgia, serif',
-          fontSize: '28px',
-          fontWeight: '300',
-          color: '#1a1714',
-          marginBottom: '4px'
-        }}>
-          Good morning, {session.user?.name?.split(' ')[0]}
+  return (
+
+    <div
+      style={{
+        padding: '48px 32px',
+        maxWidth: '1100px',
+        margin: '0 auto',
+        fontFamily: 'Georgia, serif'
+      }}
+    >
+
+      {/* Header */}
+
+      <div style={{ marginBottom: '36px' }}>
+
+        <h1
+          style={{
+            fontSize: '30px',
+            fontWeight: '300',
+            marginBottom: '6px',
+            letterSpacing: '-0.01em'
+          }}
+        >
+          {greeting}, {session.user?.name?.split(' ')[0]}
         </h1>
-        <p style={{ fontSize: '13px', color: '#9e9488', fontStyle: 'italic' }}>
-          {new Date().toLocaleDateString('en-IN', {
-            weekday: 'long', year: 'numeric',
-            month: 'long',   day: 'numeric'
-          })}
-        </p>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '16px',
+            alignItems: 'center'
+          }}
+        >
+          <p
+            style={{
+              fontSize: '13px',
+              color: '#9e9488',
+              fontStyle: 'italic'
+            }}
+          >
+            {new Date().toLocaleDateString('en-IN', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </p>
+
+          {/* Streak flame */}
+
+          <div
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: '#8b7355',
+              background: 'rgba(201,151,58,0.08)',
+              padding: '3px 8px',
+              borderRadius: '4px'
+            }}
+          >
+            🔥 {combinedStreak?.currentCount ?? 0} day streak
+          </div>
+
+        </div>
+
       </div>
+
+      {/* Activity */}
 
       <ActivityGraph userId={userId} />
 
-      {/* Streak stat cards */}
-      <div style={{
-        display: 'grid',
-        // Streak cards — 2 columns on mobile, 4 on desktop
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '16px',
-        marginBottom: '32px'
-      }}>
+      {/* Streak Cards */}
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '18px',
+          marginBottom: '36px'
+        }}
+      >
+
         {[
-          { label: 'Combined Streak', value: combinedStreak?.currentCount ?? 0,  unit: 'days',    best: combinedStreak?.bestCount ?? 0 },
-          { label: 'Reading Streak',  value: readingStreak?.currentCount  ?? 0,  unit: 'days',    best: readingStreak?.bestCount  ?? 0 },
-          { label: 'Reflection Streak', value: reflStreak?.currentCount   ?? 0,  unit: 'entries', best: reflStreak?.bestCount     ?? 0 },
-          { label: 'Task Streak',     value: taskStreak?.currentCount     ?? 0,  unit: 'days',    best: taskStreak?.bestCount     ?? 0 },
+          {
+            label: 'Combined Streak',
+            value: combinedStreak?.currentCount ?? 0,
+            unit: 'days',
+            best: combinedStreak?.bestCount ?? 0
+          },
+          {
+            label: 'Reading Streak',
+            value: readingStreak?.currentCount ?? 0,
+            unit: 'days',
+            best: readingStreak?.bestCount ?? 0
+          },
+          {
+            label: 'Reflection Streak',
+            value: reflStreak?.currentCount ?? 0,
+            unit: 'entries',
+            best: reflStreak?.bestCount ?? 0
+          },
+          {
+            label: 'Task Streak',
+            value: taskStreak?.currentCount ?? 0,
+            unit: 'days',
+            best: taskStreak?.bestCount ?? 0
+          }
         ].map((stat, i) => (
-          <div key={i} style={{
-            background: '#f5f0e8',
-            border: '1px solid rgba(139,115,85,0.2)',
-            borderRadius: '6px',
-            padding: '22px 24px',
-            borderTop: '2px solid #c9973a',
-            position: 'relative'
-          }}>
-            <div style={{
-              fontFamily: 'monospace',
-              fontSize: '8px',
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase',
-              color: '#9e9488',
-              marginBottom: '10px'
-            }}>
+
+          <div
+            key={i}
+            style={{
+              background: '#f5f0e8',
+              border: '1px solid rgba(139,115,85,0.2)',
+              borderRadius: '8px',
+              padding: '22px',
+              borderTop: '2px solid #c9973a',
+              transition: 'box-shadow 0.15s ease',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+            }}
+          >
+
+            <div
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '8px',
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: '#9e9488',
+                marginBottom: '12px'
+              }}
+            >
               {stat.label}
             </div>
-            <div style={{
-              fontFamily: 'Georgia, serif',
-              fontSize: '40px',
-              fontWeight: '300',
-              color: '#1a1714',
-              lineHeight: 1
-            }}>
+
+            <div
+              style={{
+                fontSize: '40px',
+                fontWeight: '300',
+                lineHeight: 1
+              }}
+            >
               {stat.value}
-              <span style={{ fontSize: '14px', color: '#8b7355', marginLeft: '4px' }}>
+              <span
+                style={{
+                  fontSize: '14px',
+                  marginLeft: '4px',
+                  color: '#8b7355'
+                }}
+              >
                 {stat.unit}
               </span>
             </div>
-            <div style={{
-              fontSize: '11px',
-              color: '#9e9488',
-              fontStyle: 'italic',
-              marginTop: '8px'
-            }}>
+
+            <div
+              style={{
+                fontSize: '11px',
+                color: '#9e9488',
+                marginTop: '8px',
+                fontStyle: 'italic'
+              }}
+            >
               Best: {stat.best} {stat.unit}
             </div>
+
           </div>
+
         ))}
+
       </div>
 
-      {/* Middle row — Tasks + Chain */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '20px',
-        marginBottom: '24px'
-      }}>
+      {/* Middle Section */}
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px,1fr))',
+          gap: '20px',
+          marginBottom: '28px'
+        }}
+      >
 
         {/* Pending Tasks */}
-        <div style={{
-          background: '#f5f0e8',
-          border: '1px solid rgba(139,115,85,0.2)',
-          borderRadius: '6px',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            padding: '18px 24px',
-            borderBottom: '1px solid rgba(139,115,85,0.15)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <span style={{ fontFamily: 'Georgia, serif', fontSize: '17px' }}>
-              Pending Tasks
-            </span>
-            <a href="/tasks" style={{
-              fontFamily: 'monospace',
-              fontSize: '9px',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: '#8b7355',
-              textDecoration: 'none'
-            }}>
-              View all →
-            </a>
-          </div>
-          <div style={{ padding: '4px 24px 16px' }}>
+
+        <div
+          style={{
+            background: '#f5f0e8',
+            border: '1px solid rgba(139,115,85,0.2)',
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}
+        >
+
+          <SectionHeader title="Pending Tasks" link="/tasks" />
+
+          <div style={{ padding: '12px 24px 18px' }}>
+
             {pendingTasks.length === 0 ? (
-              <p style={{
-                padding: '20px 0',
-                color: '#9e9488',
-                fontStyle: 'italic',
-                fontSize: '13px',
-                textAlign: 'center'
-              }}>
-                All tasks complete. Well done.
-              </p>
+
+              <Empty text="All tasks complete. Well done." />
+
             ) : (
+
               pendingTasks.map(task => {
+
                 const isOverdue = new Date() > task.dueAt
-                const daysLeft  = Math.ceil(
-                  (task.dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                )
+
                 return (
-                  <div key={task.id} style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '14px',
-                    padding: '14px 0',
-                    borderBottom: '1px solid rgba(139,115,85,0.12)'
-                  }}>
-                    <div style={{
-                      width: '18px', height: '18px',
-                      border: '1.5px solid rgba(139,115,85,0.4)',
-                      borderRadius: '3px',
-                      flexShrink: 0,
-                      marginTop: '2px'
-                    }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{
-                        fontFamily: 'Georgia, serif',
-                        fontSize: '13px',
-                        color: '#1a1714',
-                        marginBottom: '4px'
-                      }}>
-                        {task.title}
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontSize: '9px',
-                          letterSpacing: '0.1em',
-                          textTransform: 'uppercase',
-                          padding: '2px 8px',
-                          background: 'rgba(245,240,232,0.8)',
-                          border: '1px solid rgba(139,115,85,0.2)',
-                          borderRadius: '2px',
-                          color: '#8b7355'
-                        }}>
-                          {task.type}
-                        </span>
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontSize: '10px',
-                          color: isOverdue ? '#8b2020' : daysLeft <= 1 ? '#a07830' : '#9e9488'
-                        }}>
-                          {isOverdue ? '⚠ Overdue'
-                            : daysLeft === 0 ? '⏱ Due today'
-                            : daysLeft === 1 ? '⏱ Due tomorrow'
-                            : `Due ${task.dueAt.toLocaleDateString('en-IN')}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+
+                  <TaskRow
+                    key={task.id}
+                    title={task.title}
+                    type={task.type}
+                    due={task.dueAt}
+                    overdue={isOverdue}
+                  />
+
                 )
+
               })
+
             )}
+
           </div>
+
         </div>
 
-        {/* Active Chain */}
-        <div style={{
-          background: '#f5f0e8',
-          border: '1px solid rgba(139,115,85,0.2)',
-          borderRadius: '6px',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            padding: '18px 24px',
-            borderBottom: '1px solid rgba(139,115,85,0.15)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <span style={{ fontFamily: 'Georgia, serif', fontSize: '17px' }}>
-              Knowledge Chain
-            </span>
-            <a href="/chain" style={{
-              fontFamily: 'monospace', fontSize: '9px',
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: '#8b7355', textDecoration: 'none'
-            }}>
-              Open →
-            </a>
-          </div>
-          <div style={{ padding: '16px 24px' }}>
+        {/* Knowledge Chain */}
+
+        <div
+          style={{
+            background: '#f5f0e8',
+            border: '1px solid rgba(139,115,85,0.2)',
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}
+        >
+
+          <SectionHeader title="Knowledge Chain" link="/chain" />
+
+          <div style={{ padding: '18px 24px' }}>
+
             {!activeChain ? (
-              <p style={{
-                color: '#9e9488', fontStyle: 'italic',
-                fontSize: '13px', textAlign: 'center', padding: '20px 0'
-              }}>
-                No active chain right now.
-              </p>
+
+              <Empty text="No active chain right now." />
+
             ) : (
+
               <>
-                {/* Chain status indicator */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '14px'
-                }}>
-                  <div style={{
-                    width: '7px', height: '7px',
-                    borderRadius: '50%',
-                    background: '#2ecc71',
-                    boxShadow: '0 0 6px rgba(46,204,113,0.5)'
-                  }} />
-                  <span style={{
-                    fontFamily: 'monospace', fontSize: '9px',
-                    letterSpacing: '0.12em', textTransform: 'uppercase',
+
+                <div
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '10px',
+                    marginBottom: '10px',
                     color: '#3d6b3d'
-                  }}>
-                    Active — {activeChain.linkCount} links
-                  </span>
+                  }}
+                >
+                  ● Active — {activeChain.linkCount} links
                 </div>
 
-                {/* Chain title */}
-                <div style={{
-                  fontFamily: 'Georgia, serif',
-                  fontSize: '15px',
-                  fontStyle: 'italic',
-                  color: '#1a1714',
-                  marginBottom: '14px',
-                  lineHeight: 1.4
-                }}>
+                <div
+                  style={{
+                    fontSize: '15px',
+                    fontStyle: 'italic',
+                    marginBottom: '14px'
+                  }}
+                >
                   "{activeChain.title}"
                 </div>
 
-                {/* Latest link preview */}
                 {activeChain.links[0] && (
-                  <div style={{
-                    background: 'rgba(245,240,232,0.6)',
-                    borderLeft: '3px solid rgba(139,115,85,0.3)',
-                    padding: '10px 14px',
-                    borderRadius: '0 4px 4px 0',
-                    marginBottom: '14px'
-                  }}>
-                    <div style={{
-                      fontFamily: 'monospace', fontSize: '9px',
-                      color: '#8b7355', marginBottom: '4px'
-                    }}>
+
+                  <div
+                    style={{
+                      borderLeft: '3px solid rgba(139,115,85,0.3)',
+                      padding: '10px 14px',
+                      background: 'rgba(245,240,232,0.6)'
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '9px',
+                        marginBottom: '4px'
+                      }}
+                    >
                       {activeChain.links[0].user.name}
                     </div>
-                    <div style={{
-                      fontFamily: 'Georgia, serif', fontSize: '12px',
-                      fontStyle: 'italic', color: '#3d4a5c',
-                      lineHeight: 1.6,
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical' as const
-                    }}>
+
+                    <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
                       {activeChain.links[0].content}
                     </div>
+
                   </div>
+
                 )}
 
-                <a href="/chain" style={{
-                  display: 'block',
-                  padding: '10px',
-                  border: '1.5px dashed rgba(139,115,85,0.4)',
-                  borderRadius: '4px',
-                  textAlign: 'center',
-                  fontFamily: 'Georgia, serif',
-                  fontSize: '12px',
-                  fontStyle: 'italic',
-                  color: '#8b7355',
-                  textDecoration: 'none'
-                }}>
-                  ✦ Continue the chain
-                </a>
               </>
+
             )}
+
           </div>
+
         </div>
 
       </div>
 
-      {/* Leaderboard strip */}
-      <div style={{
-        background: '#f5f0e8',
-        border: '1px solid rgba(139,115,85,0.2)',
-        borderRadius: '6px',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: '16px 24px',
-          borderBottom: '1px solid rgba(139,115,85,0.15)'
-        }}>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: '17px' }}>
-            Leaderboard
-          </span>
-        </div>
-        <div style={{ padding: '8px 24px 16px' }}>
-          {leaderboard.map((member, index) => {
+      {/* Leaderboard */}
+
+      <div
+        style={{
+          background: '#f5f0e8',
+          border: '1px solid rgba(139,115,85,0.2)',
+          borderRadius: '8px',
+          overflow: 'hidden'
+        }}
+      >
+
+        <SectionHeader title="Leaderboard" />
+
+        <div style={{ padding: '10px 24px 16px' }}>
+
+          {leaderboard.map((member, i) => {
+
             const isMe = member.id === userId
-            const rankColors = ['#c9973a', '#8a9aaa', '#a0724a']
+
             return (
-              <div key={member.id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                padding: '10px 0',
-                borderBottom: '1px solid rgba(139,115,85,0.1)',
-                background: isMe ? 'rgba(201,151,58,0.04)' : 'transparent'
-              }}>
-                <span style={{
-                  fontFamily: 'Georgia, serif',
-                  fontSize: '18px',
-                  fontWeight: '300',
-                  color: rankColors[index] ?? '#9e9488',
-                  width: '24px',
-                  textAlign: 'center',
-                  flexShrink: 0
-                }}>
-                  {index + 1}
-                </span>
-                <div style={{
-                  width: '28px', height: '28px',
-                  borderRadius: '50%',
-                  background: '#3d4a5c',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'Georgia, serif',
-                  fontSize: '11px', color: '#f5f0e8',
-                  flexShrink: 0
-                }}>
+
+              <div
+                key={member.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '10px 0',
+                  background: isMe
+                    ? 'rgba(201,151,58,0.05)'
+                    : 'transparent'
+                }}
+              >
+
+                <span style={{ width: '24px' }}>{i + 1}</span>
+
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: '#3d4a5c',
+                    color: '#f5f0e8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px'
+                  }}
+                >
                   {member.name.charAt(0)}
                 </div>
-                <span style={{
-                  flex: 1,
-                  fontFamily: 'Georgia, serif',
-                  fontSize: '13px',
-                  fontWeight: isMe ? 'bold' : 'normal'
-                }}>
+
+                <span style={{ flex: 1 }}>
                   {isMe ? 'You' : member.name}
                 </span>
-                <span style={{
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  color: '#8b7355'
-                }}>
+
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    color: '#8b7355'
+                  }}
+                >
                   {member.totalPoints.toLocaleString()} pts
                 </span>
+
               </div>
+
             )
+
           })}
+
         </div>
+
       </div>
 
     </div>
+  )
+}
+
+function SectionHeader({ title, link }: any) {
+
+  return (
+
+    <div
+      style={{
+        padding: '18px 24px',
+        borderBottom: '1px solid rgba(139,115,85,0.15)',
+        display: 'flex',
+        justifyContent: 'space-between'
+      }}
+    >
+
+      <span style={{ fontSize: '17px' }}>{title}</span>
+
+      {link && (
+
+        <a
+          href={link}
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '9px',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: '#8b7355',
+            textDecoration: 'none'
+          }}
+        >
+          View →
+        </a>
+
+      )}
+
+    </div>
+
+  )
+}
+
+function Empty({ text }: any) {
+
+  return (
+
+    <p
+      style={{
+        padding: '20px 0',
+        textAlign: 'center',
+        color: '#9e9488',
+        fontStyle: 'italic',
+        fontSize: '13px'
+      }}
+    >
+      {text}
+    </p>
+
+  )
+}
+
+function TaskRow({ title, type, due, overdue }: any) {
+
+  return (
+
+    <div
+      style={{
+        display: 'flex',
+        gap: '14px',
+        padding: '12px 0',
+        borderBottom: '1px solid rgba(139,115,85,0.12)'
+      }}
+    >
+
+      <div
+        style={{
+          width: '18px',
+          height: '18px',
+          border: '1.5px solid rgba(139,115,85,0.4)',
+          borderRadius: '3px'
+        }}
+      />
+
+      <div style={{ flex: 1 }}>
+
+        <div style={{ fontSize: '13px' }}>{title}</div>
+
+        <div style={{ fontSize: '10px', color: '#9e9488' }}>
+          {type} · {due.toLocaleDateString()}
+        </div>
+
+      </div>
+
+      {overdue && (
+
+        <span style={{ color: '#8b2020', fontSize: '11px' }}>
+          Overdue
+        </span>
+
+      )}
+
+    </div>
+
   )
 }
