@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-const [running, setRunning] = useState(false)
-const [runMsg,  setRunMsg]  = useState('')
 
 type User = {
   id: string
@@ -41,6 +39,7 @@ type Stats = {
   chainLinks: number
 }
 
+// ── Styles ──────────────────────────────────────────────────
 const card = {
   background: '#f5f0e8',
   border: '1px solid rgba(139,115,85,0.2)',
@@ -98,24 +97,28 @@ export default function AdminClient({
   const router = useRouter()
   const [tab, setTab] = useState<'overview' | 'members' | 'tasks' | 'chains'>('overview')
 
+  // ── Background Job States ──────────────────────────────────
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
+
   // ── Task form ──────────────────────────────────────────────
   const [newTask, setNewTask] = useState({
     title: '', description: '', type: 'READING',
     dueAt: '', pointsValue: '50', minWordCount: ''
   })
-  const [selectAll,     setSelectAll]     = useState(true)
+  const [selectAll, setSelectAll] = useState(true)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [creatingTask,  setCreatingTask]  = useState(false)
-  const [taskMsg,       setTaskMsg]       = useState('')
+  const [creatingTask, setCreatingTask] = useState(false)
+  const [taskMsg, setTaskMsg] = useState('')
 
   // ── Chain form ─────────────────────────────────────────────
   const [newChain, setNewChain] = useState({
     title: '', seedPrompt: '', windowHours: '8'
   })
   const [creatingChain, setCreatingChain] = useState(false)
-  const [chainMsg,      setChainMsg]      = useState('')
+  const [chainMsg, setChainMsg] = useState('')
 
-  // ── Change role ────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────
   async function changeRole(userId: string, role: string) {
     await fetch('/api/admin/users/role', {
       method: 'POST',
@@ -125,7 +128,6 @@ export default function AdminClient({
     router.refresh()
   }
 
-  // ── Create task ────────────────────────────────────────────
   async function createTask() {
     if (!newTask.title || !newTask.dueAt) {
       setTaskMsg('Please fill in title and due date.')
@@ -156,65 +158,19 @@ export default function AdminClient({
   }
 
   async function runScheduler() {
-  setRunning(true)
-  setRunMsg('')
-  const res  = await fetch('/api/cron/scheduler')
-  const data = await res.json()
-  setRunning(false)
-  setRunMsg(`✓ Done — ${data.results.chains.broken ?? 0} chains checked, ${data.results.streaks.reset ?? 0} streaks reset`)
-}
+    setRunning(true)
+    setRunMsg('')
+    try {
+      const res = await fetch('/api/cron/scheduler')
+      const data = await res.json()
+      setRunMsg(`✓ Done — ${data.results?.chains?.broken ?? 0} chains checked, ${data.results?.streaks?.reset ?? 0} streaks reset`)
+    } catch (err) {
+      setRunMsg('Error running scheduler.')
+    } finally {
+      setRunning(false)
+    }
+  }
 
-// Add this JSX at the top of the overview tab
-<div style={{
-  display: 'flex', alignItems: 'center',
-  gap: '12px', marginBottom: '24px',
-  padding: '16px 20px',
-  background: '#f5f0e8',
-  border: '1px solid rgba(139,115,85,0.2)',
-  borderRadius: '6px',
-}}>
-  <div style={{ flex: 1 }}>
-    <div style={{
-      fontFamily: 'Georgia, serif',
-      fontSize: '14px', color: '#1a1714'
-    }}>
-      Background Jobs
-    </div>
-    <div style={{
-      fontFamily: 'monospace', fontSize: '9px',
-      color: '#9e9488', marginTop: '3px'
-    }}>
-      Runs automatically at midnight · click to run now
-    </div>
-  </div>
-  {runMsg && (
-    <div style={{
-      fontFamily: 'Georgia, serif', fontSize: '12px',
-      color: '#3d6b3d', fontStyle: 'italic'
-    }}>
-      {runMsg}
-    </div>
-  )}
-  <button
-    onClick={runScheduler}
-    disabled={running}
-    style={{
-      padding: '8px 16px',
-      background: running ? '#9e9488' : '#1a1714',
-      color: '#f5f0e8', border: 'none',
-      borderRadius: '4px',
-      fontFamily: 'monospace', fontSize: '9px',
-      letterSpacing: '0.1em',
-      textTransform: 'uppercase' as const,
-      cursor: running ? 'not-allowed' : 'pointer',
-      flexShrink: 0,
-    }}
-  >
-    {running ? 'Running...' : '▶ Run Now'}
-  </button>
-</div>
-
-  // ── Seed chain ─────────────────────────────────────────────
   async function seedChain() {
     if (!newChain.title || !newChain.seedPrompt) {
       setChainMsg('Please fill in title and prompt.')
@@ -244,15 +200,14 @@ export default function AdminClient({
 
   return (
     <div>
-
       {/* ── Tab bar ─────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', flexWrap: 'wrap' }}>
         {(['overview', 'members', 'tasks', 'chains'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={btn(tab === t)}>
-            {t === 'overview'  && '◈ Overview'}
-            {t === 'members'   && '◎ Members'}
-            {t === 'tasks'     && '☰ Tasks'}
-            {t === 'chains'    && '⛓ Chains'}
+            {t === 'overview' && '◈ Overview'}
+            {t === 'members' && '◎ Members'}
+            {t === 'tasks' && '☰ Tasks'}
+            {t === 'chains' && '⛓ Chains'}
           </button>
         ))}
       </div>
@@ -262,6 +217,47 @@ export default function AdminClient({
       ══════════════════════════════════════════════════ */}
       {tab === 'overview' && (
         <div>
+          {/* Background Jobs UI */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            gap: '12px', marginBottom: '24px',
+            padding: '16px 20px',
+            background: '#f5f0e8',
+            border: '1px solid rgba(139,115,85,0.2)',
+            borderRadius: '6px',
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#1a1714' }}>
+                Background Jobs
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: '9px', color: '#9e9488', marginTop: '3px' }}>
+                Runs automatically at midnight · click to run now
+              </div>
+            </div>
+            {runMsg && (
+              <div style={{ fontFamily: 'Georgia, serif', fontSize: '12px', color: '#3d6b3d', fontStyle: 'italic' }}>
+                {runMsg}
+              </div>
+            )}
+            <button
+              onClick={runScheduler}
+              disabled={running}
+              style={{
+                padding: '8px 16px',
+                background: running ? '#9e9488' : '#1a1714',
+                color: '#f5f0e8', border: 'none',
+                borderRadius: '4px',
+                fontFamily: 'monospace', fontSize: '9px',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase' as const,
+                cursor: running ? 'not-allowed' : 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              {running ? 'Running...' : '▶ Run Now'}
+            </button>
+          </div>
+
           {/* Stat cards */}
           <div style={{
             display: 'grid',
@@ -270,10 +266,10 @@ export default function AdminClient({
             marginBottom: '24px'
           }}>
             {[
-              { label: 'Total Members',   value: stats.users,       color: '#1e2d4a' },
-              { label: 'Submissions',      value: stats.submissions,  color: '#3d6b3d' },
-              { label: 'Journal Entries',  value: stats.journals,     color: '#8b7355' },
-              { label: 'Chain Links',      value: stats.chainLinks,   color: '#a07830' },
+              { label: 'Total Members', value: stats?.users ?? 0, color: '#1e2d4a' },
+              { label: 'Submissions', value: stats?.submissions ?? 0, color: '#3d6b3d' },
+              { label: 'Journal Entries', value: stats?.journals ?? 0, color: '#8b7355' },
+              { label: 'Chain Links', value: stats?.chainLinks ?? 0, color: '#a07830' },
             ].map((s, i) => (
               <div key={i} style={{ ...card, borderTop: `3px solid ${s.color}`, marginBottom: 0 }}>
                 <div style={{ ...label, marginBottom: '10px' }}>{s.label}</div>
@@ -287,20 +283,14 @@ export default function AdminClient({
             ))}
           </div>
 
-          {/* Members with no submissions */}
+          {/* Members with no activity */}
           <div style={card}>
-            <div style={{
-              fontFamily: 'Georgia, serif', fontSize: '17px',
-              color: '#1a1714', marginBottom: '16px'
-            }}>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', color: '#1a1714', marginBottom: '16px' }}>
               No Activity Yet
             </div>
             {members.filter(u => u._count.submissions === 0).length === 0 ? (
-              <p style={{
-                fontFamily: 'Georgia, serif', fontSize: '13px',
-                color: '#9e9488', fontStyle: 'italic'
-              }}>
-                All members have submitted at least once. 
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', color: '#9e9488', fontStyle: 'italic' }}>
+                All members have submitted at least once.
               </p>
             ) : (
               members.filter(u => u._count.submissions === 0).map(u => (
@@ -318,16 +308,10 @@ export default function AdminClient({
                     {u.name.charAt(0)}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '13px' }}>
-                      {u.name}
-                    </div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#9e9488' }}>
-                      {u.email}
-                    </div>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '13px' }}>{u.name}</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#9e9488' }}>{u.email}</div>
                   </div>
-                  <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#8b2020' }}>
-                    No submissions yet
-                  </div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#8b2020' }}>No submissions yet</div>
                 </div>
               ))
             )}
@@ -340,102 +324,40 @@ export default function AdminClient({
       ══════════════════════════════════════════════════ */}
       {tab === 'members' && (
         <div style={card}>
-          <div style={{
-            fontFamily: 'Georgia, serif', fontSize: '17px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '20px' }}>
             All Users — {users.length} total
           </div>
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
                 <tr>
                   {['Name', 'Email', 'Role', 'Points', 'Submissions', 'Journals', 'Change Role'].map(h => (
                     <th key={h} style={{
-                      ...label,
-                      padding: '8px 12px',
+                      ...label, padding: '8px 12px',
                       borderBottom: '2px solid rgba(139,115,85,0.2)',
-                      textAlign: 'left',
-                      whiteSpace: 'nowrap' as const
-                    }}>
-                      {h}
-                    </th>
+                      textAlign: 'left', whiteSpace: 'nowrap'
+                    }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {users.map(u => (
                   <tr key={u.id}>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)',
-                      fontFamily: 'Georgia, serif', fontSize: '13px'
-                    }}>
-                      {u.name}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)',
-                      fontFamily: 'monospace', fontSize: '11px', color: '#8b7355'
-                    }}>
-                      {u.email}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)'
-                    }}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)', fontFamily: 'Georgia, serif', fontSize: '13px' }}>{u.name}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)', fontFamily: 'monospace', fontSize: '11px', color: '#8b7355' }}>{u.email}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)' }}>
                       <span style={{
-                        fontFamily: 'monospace', fontSize: '8px',
-                        letterSpacing: '0.1em', textTransform: 'uppercase' as const,
-                        padding: '3px 8px', borderRadius: '2px',
-                        background: u.role === 'ADMIN' ? 'rgba(30,45,74,0.1)'
-                          : u.role === 'MENTOR' ? 'rgba(201,151,58,0.1)'
-                          : 'rgba(61,107,61,0.1)',
-                        color: u.role === 'ADMIN' ? '#1e2d4a'
-                          : u.role === 'MENTOR' ? '#a07830'
-                          : '#3d6b3d',
-                      }}>
-                        {u.role}
-                      </span>
+                        fontFamily: 'monospace', fontSize: '8px', padding: '3px 8px', borderRadius: '2px',
+                        background: u.role === 'ADMIN' ? 'rgba(30,45,74,0.1)' : u.role === 'MENTOR' ? 'rgba(201,151,58,0.1)' : 'rgba(61,107,61,0.1)',
+                        color: u.role === 'ADMIN' ? '#1e2d4a' : u.role === 'MENTOR' ? '#a07830' : '#3d6b3d',
+                      }}>{u.role}</span>
                     </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)',
-                      fontFamily: 'monospace', fontSize: '12px',
-                      textAlign: 'center' as const
-                    }}>
-                      {u.totalPoints}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)',
-                      fontFamily: 'monospace', fontSize: '12px',
-                      textAlign: 'center' as const
-                    }}>
-                      {u._count.submissions}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)',
-                      fontFamily: 'monospace', fontSize: '12px',
-                      textAlign: 'center' as const
-                    }}>
-                      {u._count.journals}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid rgba(139,115,85,0.1)'
-                    }}>
-                      <select
-                        defaultValue={u.role}
-                        onChange={e => changeRole(u.id, e.target.value)}
-                        style={{
-                          padding: '5px 8px',
-                          border: '1px solid rgba(139,115,85,0.25)',
-                          borderRadius: '3px', background: '#faf7f2',
-                          fontFamily: 'monospace', fontSize: '10px', cursor: 'pointer'
-                        }}
-                      >
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)', fontFamily: 'monospace', fontSize: '12px', textAlign: 'center' }}>{u.totalPoints}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)', fontFamily: 'monospace', fontSize: '12px', textAlign: 'center' }}>{u._count.submissions}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)', fontFamily: 'monospace', fontSize: '12px', textAlign: 'center' }}>{u._count.journals}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(139,115,85,0.1)' }}>
+                      <select defaultValue={u.role} onChange={e => changeRole(u.id, e.target.value)}
+                        style={{ padding: '5px 8px', border: '1px solid rgba(139,115,85,0.25)', borderRadius: '3px', background: '#faf7f2', fontFamily: 'monospace', fontSize: '10px', cursor: 'pointer' }}>
                         <option value="MEMBER">Member</option>
                         <option value="MENTOR">Mentor</option>
                         <option value="ADMIN">Admin</option>
@@ -454,182 +376,53 @@ export default function AdminClient({
       ══════════════════════════════════════════════════ */}
       {tab === 'tasks' && (
         <div>
-          {/* Create task form */}
+          {/* Create Task Form */}
           <div style={card}>
-            <div style={{
-              fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '20px'
-            }}>
-              Create New Task
-            </div>
-
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '20px' }}>Create New Task</div>
             <label style={label}>Task Title *</label>
-            <input style={input} type="text"
-              placeholder="e.g. Read Chapter 1 of Thinking Fast and Slow"
-              value={newTask.title}
-              onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))}
-            />
+            <input style={input} type="text" value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} />
+            
+            <label style={label}>Description</label>
+            <textarea style={{ ...input, minHeight: '80px', resize: 'vertical' }} value={newTask.description} onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))} />
 
-            <label style={label}>Description / Instructions</label>
-            <textarea
-              style={{ ...input, minHeight: '80px', resize: 'vertical' as const }}
-              placeholder="What should members do? Any specific questions to answer?"
-              value={newTask.description}
-              onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))}
-            />
-
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               <div>
                 <label style={label}>Type</label>
-                <select style={input} value={newTask.type}
-                  onChange={e => setNewTask(p => ({ ...p, type: e.target.value }))}>
-                  {['READING','REFLECTION','LECTURE','ESSAY','DISCUSSION'].map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                <select style={input} value={newTask.type} onChange={e => setNewTask(p => ({ ...p, type: e.target.value }))}>
+                  {['READING', 'REFLECTION', 'LECTURE', 'ESSAY', 'DISCUSSION'].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
                 <label style={label}>Due Date *</label>
-                <input style={input} type="datetime-local"
-                  value={newTask.dueAt}
-                  onChange={e => setNewTask(p => ({ ...p, dueAt: e.target.value }))}
-                />
+                <input style={input} type="datetime-local" value={newTask.dueAt} onChange={e => setNewTask(p => ({ ...p, dueAt: e.target.value }))} />
               </div>
               <div>
-                <label style={label}>Points Value</label>
-                <input style={input} type="number"
-                  value={newTask.pointsValue}
-                  onChange={e => setNewTask(p => ({ ...p, pointsValue: e.target.value }))}
-                />
+                <label style={label}>Points</label>
+                <input style={input} type="number" value={newTask.pointsValue} onChange={e => setNewTask(p => ({ ...p, pointsValue: e.target.value }))} />
               </div>
             </div>
 
-            <label style={label}>Minimum Word Count (optional)</label>
-            <input style={{ ...input, width: '200px' }} type="number"
-              placeholder="e.g. 300"
-              value={newTask.minWordCount}
-              onChange={e => setNewTask(p => ({ ...p, minWordCount: e.target.value }))}
-            />
-
-            <label style={label}>Assign To</label>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                fontFamily: 'Georgia, serif', fontSize: '13px',
-                cursor: 'pointer', marginBottom: '10px'
-              }}>
-                <input type="checkbox" checked={selectAll}
-                  onChange={e => {
-                    setSelectAll(e.target.checked)
-                    setSelectedUsers(e.target.checked
-                      ? members.map(u => u.id) : [])
-                  }}
-                />
-                Assign to ALL members ({members.length} members)
-              </label>
-
-              {!selectAll && (
-                <div style={{
-                  maxHeight: '180px', overflowY: 'auto',
-                  border: '1px solid rgba(139,115,85,0.2)',
-                  borderRadius: '4px', padding: '8px'
-                }}>
-                  {members.map(u => (
-                    <label key={u.id} style={{
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      fontFamily: 'Georgia, serif', fontSize: '12px',
-                      padding: '5px', cursor: 'pointer'
-                    }}>
-                      <input type="checkbox"
-                        checked={selectedUsers.includes(u.id)}
-                        onChange={e => {
-                          setSelectedUsers(p =>
-                            e.target.checked
-                              ? [...p, u.id]
-                              : p.filter(id => id !== u.id)
-                          )
-                        }}
-                      />
-                      {u.name}
-                      <span style={{
-                        fontFamily: 'monospace', fontSize: '10px', color: '#9e9488'
-                      }}>
-                        {u.email}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {taskMsg && (
-              <div style={{
-                padding: '10px 14px', borderRadius: '4px', marginBottom: '12px',
-                background: taskMsg.startsWith('✓')
-                  ? 'rgba(61,107,61,0.1)' : 'rgba(139,32,32,0.08)',
-                border: `1px solid ${taskMsg.startsWith('✓')
-                  ? 'rgba(61,107,61,0.3)' : 'rgba(139,32,32,0.2)'}`,
-                color: taskMsg.startsWith('✓') ? '#3d6b3d' : '#8b2020',
-                fontFamily: 'Georgia, serif', fontSize: '13px'
-              }}>
-                {taskMsg}
-              </div>
-            )}
-
-            <button onClick={createTask} disabled={creatingTask} style={{
-              padding: '11px 28px',
-              background: creatingTask ? '#9e9488' : '#1a1714',
-              color: '#f5f0e8', border: 'none', borderRadius: '4px',
-              fontFamily: 'Georgia, serif', fontSize: '13px',
-              cursor: creatingTask ? 'not-allowed' : 'pointer'
-            }}>
+            {taskMsg && <div style={{ padding: '10px', borderRadius: '4px', marginBottom: '12px', background: taskMsg.includes('✓') ? '#e6f4ea' : '#fce8e8', color: taskMsg.includes('✓') ? '#3d6b3d' : '#8b2020', fontSize: '13px' }}>{taskMsg}</div>}
+            
+            <button onClick={createTask} disabled={creatingTask} style={{ padding: '11px 28px', background: creatingTask ? '#9e9488' : '#1a1714', color: '#f5f0e8', border: 'none', borderRadius: '4px', cursor: creatingTask ? 'not-allowed' : 'pointer' }}>
               {creatingTask ? 'Creating...' : 'Create Task →'}
             </button>
           </div>
 
-          {/* Existing tasks */}
+          {/* Existing Tasks */}
           <div style={card}>
-            <div style={{
-              fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '16px'
-            }}>
-              All Tasks — {tasks.length} total
-            </div>
-            {tasks.length === 0 ? (
-              <p style={{
-                fontFamily: 'Georgia, serif', fontSize: '13px',
-                color: '#9e9488', fontStyle: 'italic'
-              }}>
-                No tasks yet. Create one above.
-              </p>
-            ) : (
-              tasks.map(t => (
-                <div key={t.id} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '16px',
-                  padding: '14px 0', borderBottom: '1px solid rgba(139,115,85,0.1)'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontFamily: 'Georgia, serif', fontSize: '14px', marginBottom: '4px'
-                    }}>
-                      {t.title}
-                    </div>
-                    <div style={{
-                      fontFamily: 'monospace', fontSize: '9px',
-                      color: '#9e9488', letterSpacing: '0.1em'
-                    }}>
-                      {t.type} · Due {new Date(t.dueAt).toLocaleDateString('en-IN')} · {t.pointsValue} pts
-                    </div>
-                  </div>
-                  <div style={{
-                    fontFamily: 'monospace', fontSize: '11px',
-                    color: '#3d6b3d', flexShrink: 0
-                  }}>
-                    {t._count.submissions} / {t.assignedTo.length} submitted
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '16px' }}>All Tasks — {tasks.length} total</div>
+            {tasks.map(t => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '14px 0', borderBottom: '1px solid rgba(139,115,85,0.1)' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Georgia, serif', fontSize: '14px' }}>{t.title}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '9px', color: '#9e9488' }}>
+                    {t.type} · Due {t.dueAt ? new Date(t.dueAt).toLocaleDateString('en-IN') : '—'} · {t.pointsValue} pts
                   </div>
                 </div>
-              ))
-            )}
+                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#3d6b3d' }}>{t._count.submissions} / {t.assignedTo.length} submitted</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -639,115 +432,40 @@ export default function AdminClient({
       ══════════════════════════════════════════════════ */}
       {tab === 'chains' && (
         <div>
-          {/* Seed chain form */}
+          {/* Seed Chain Form */}
           <div style={card}>
-            <div style={{
-              fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '20px'
-            }}>
-              Seed New Knowledge Chain
-            </div>
-
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '20px' }}>Seed New Knowledge Chain</div>
             <label style={label}>Chain Title *</label>
-            <input style={input} type="text"
-              placeholder="e.g. Is certainty ever epistemically honest?"
-              value={newChain.title}
-              onChange={e => setNewChain(p => ({ ...p, title: e.target.value }))}
-            />
-
+            <input style={input} type="text" value={newChain.title} onChange={e => setNewChain(p => ({ ...p, title: e.target.value }))} />
             <label style={label}>Opening Prompt *</label>
-            <textarea
-              style={{ ...input, minHeight: '100px', resize: 'vertical' as const }}
-              placeholder="Write the intellectual provocation that starts the chain..."
-              value={newChain.seedPrompt}
-              onChange={e => setNewChain(p => ({ ...p, seedPrompt: e.target.value }))}
-            />
-
-            <label style={label}>Hours per Link Window</label>
-            <input style={{ ...input, width: '120px' }} type="number"
-              value={newChain.windowHours}
-              onChange={e => setNewChain(p => ({ ...p, windowHours: e.target.value }))}
-            />
-
-            {chainMsg && (
-              <div style={{
-                padding: '10px 14px', borderRadius: '4px', marginBottom: '12px',
-                background: chainMsg.startsWith('✓')
-                  ? 'rgba(61,107,61,0.1)' : 'rgba(139,32,32,0.08)',
-                border: `1px solid ${chainMsg.startsWith('✓')
-                  ? 'rgba(61,107,61,0.3)' : 'rgba(139,32,32,0.2)'}`,
-                color: chainMsg.startsWith('✓') ? '#3d6b3d' : '#8b2020',
-                fontFamily: 'Georgia, serif', fontSize: '13px'
-              }}>
-                {chainMsg}
-              </div>
-            )}
-
-            <button onClick={seedChain} disabled={creatingChain} style={{
-              padding: '11px 28px',
-              background: creatingChain ? '#9e9488' : '#1a1714',
-              color: '#f5f0e8', border: 'none', borderRadius: '4px',
-              fontFamily: 'Georgia, serif', fontSize: '13px',
-              cursor: creatingChain ? 'not-allowed' : 'pointer'
-            }}>
+            <textarea style={{ ...input, minHeight: '100px' }} value={newChain.seedPrompt} onChange={e => setNewChain(p => ({ ...p, seedPrompt: e.target.value }))} />
+            
+            <button onClick={seedChain} disabled={creatingChain} style={{ padding: '11px 28px', background: creatingChain ? '#9e9488' : '#1a1714', color: '#f5f0e8', border: 'none', borderRadius: '4px', cursor: creatingChain ? 'not-allowed' : 'pointer' }}>
               {creatingChain ? 'Seeding...' : 'Seed Chain →'}
             </button>
           </div>
 
-          {/* Existing chains */}
+          {/* Existing Chains */}
           <div style={card}>
-            <div style={{
-              fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '16px'
-            }}>
-              All Chains — {chains.length} total
-            </div>
-            {chains.length === 0 ? (
-              <p style={{
-                fontFamily: 'Georgia, serif', fontSize: '13px',
-                color: '#9e9488', fontStyle: 'italic'
-              }}>
-                No chains yet. Seed one above.
-              </p>
-            ) : (
-              chains.map(c => (
-                <div key={c.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '16px',
-                  padding: '14px 0', borderBottom: '1px solid rgba(139,115,85,0.1)'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '14px'
-                    }}>
-                      "{c.title}"
-                    </div>
-                    <div style={{
-                      fontFamily: 'monospace', fontSize: '9px',
-                      color: '#9e9488', marginTop: '3px'
-                    }}>
-                      {new Date(c.createdAt).toLocaleDateString('en-IN')} · {c._count.links} links
-                    </div>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', marginBottom: '16px' }}>All Chains — {chains.length} total</div>
+            {chains.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 0', borderBottom: '1px solid rgba(139,115,85,0.1)' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '14px' }}>"{c.title}"</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '9px', color: '#9e9488' }}>
+                    {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : '—'} · {c._count.links} links
                   </div>
-                  <span style={{
-                    fontFamily: 'monospace', fontSize: '9px',
-                    letterSpacing: '0.1em', textTransform: 'uppercase' as const,
-                    padding: '3px 10px', borderRadius: '2px',
-                    background: c.status === 'ACTIVE'
-                      ? 'rgba(61,107,61,0.1)' : c.status === 'BROKEN'
-                      ? 'rgba(139,32,32,0.08)' : 'rgba(139,115,85,0.1)',
-                    color: c.status === 'ACTIVE' ? '#3d6b3d'
-                      : c.status === 'BROKEN' ? '#8b2020' : '#8b7355',
-                    border: `1px solid ${c.status === 'ACTIVE'
-                      ? 'rgba(61,107,61,0.25)' : c.status === 'BROKEN'
-                      ? 'rgba(139,32,32,0.2)' : 'rgba(139,115,85,0.2)'}`
-                  }}>
-                    {c.status}
-                  </span>
                 </div>
-              ))
-            )}
+                <span style={{
+                  fontFamily: 'monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '2px',
+                  background: c.status === 'ACTIVE' ? '#e6f4ea' : '#fce8e8',
+                  color: c.status === 'ACTIVE' ? '#3d6b3d' : '#8b2020'
+                }}>{c.status}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
-
     </div>
   )
 }
